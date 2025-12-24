@@ -3,7 +3,7 @@ from fastapi import FastAPI, Form, Depends, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-import database
+import models  # <--- Esto asume que tienes un archivo models.py
 import pandas as pd
 import io
 from datetime import datetime
@@ -76,7 +76,7 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     if not request.session.get("user"):
         return RedirectResponse(url="/login")
 
-    operadores = db.query(database.Operador).order_by(database.Operador.fecha.desc()).all()
+    operadores = db.query(models.Operador).order_by(models.Operador.fecha.desc()).all()
     total_ops = len(operadores)
     promedio = db.query(func.avg(database.Operador.hallazgos)).scalar() or 0
     top_operadores = db.query(database.Operador).order_by(database.Operador.hallazgos.desc()).limit(5).all()
