@@ -18,6 +18,11 @@ except Exception as e:
     print(f"Error base de datos: {e}")
 
 app = FastAPI()
+@app.get("/reset-db-admin-2025")
+async def reset_db():
+    models.Base.metadata.drop_all(bind=database.engine)
+    models.Base.metadata.create_all(bind=database.engine)
+    return "✅ Base de datos reseteada con éxito. Ya puedes volver al inicio."
 app.add_middleware(SessionMiddleware, secret_key="aeronautica_secret_key_2025")
 
 USER_ADMIN = "admin"
