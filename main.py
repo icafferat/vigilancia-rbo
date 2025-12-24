@@ -78,82 +78,33 @@ async def logout(request: Request):
     return RedirectResponse(url="/login")
 
 # --- DASHBOARD PRINCIPAL ---
-@app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, db: Session = Depends(get_db)):
-    if not request.session.get("user"):
+@app.get("/editar/{id}", response_class=HTMLResponse)
+async def editar_page(id: int, request: Request, db: Session = Depends(get_db)):
+    if not request.session.get("user"): 
         return RedirectResponse(url="/login")
-
-    # CORRECCIÓN: Usamos models.Operador en lugar de database.Operador
-    operadores = db.query(models.Operador).order_by(models.Operador.fecha.desc()).all()
-    total_ops = len(operadores)
-    promedio = db.query(func.avg(models.Operador.hallazgos)).scalar() or 0
-    top_operadores = db.query(models.Operador).order_by(models.Operador.hallazgos.desc()).limit(5).all()
     
-    nombres_top = [o.nombre for o in top_operadores]
-    hallazgos_top = [o.hallazgos for o in top_operadores]
-    
-    filas = ""
-    for op in operadores:
-        color = "#e74c3c" if op.nivel_riesgo == "Critico" else "#f39c12" if op.nivel_riesgo == "Alto" else "#27ae60"
-        filas += f"""
-            <tr class="fila-operador">
-                <td>{op.fecha.strftime("%d/%m/%Y") if op.fecha else "S/F"}</td>
-                <td class="nombre-op"><strong>{op.nombre}</strong></td>
-                <td style="text-align:center;">{op.hallazgos}</td>
-                <td style='color:{color}; font-weight:bold;'>{op.nivel_riesgo}</td>
-                <td style="text-align:right;">
-                    <a href="/editar/{op.id}" style="color:#3498db; text-decoration:none; margin-right:15px;">[Editar]</a>
-                    <a href="/eliminar/{op.id}" style="color:#e74c3c; text-decoration:none;" onclick="return confirm('¿Seguro?')">[X]</a>
-                </td>
-            </tr>
-        """
+    op = db.query(models.Operador).filter(models.Operador.id == id).first()
+    if not op:
+        return HTMLResponse("<h2>Operador no encontrado</h2><a href='/'>Volver</a>")
 
+    # Formulario con los datos cargados
     return f"""
     <html>
-        <head>
-            <title>RBO - Panel</title>
-            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <style>
-                body {{ font-family: sans-serif; margin: 0; background: #f4f7f6; }}
-                .top-nav {{ background: #1e3a5f; color: white; padding: 15px; display: flex; justify-content: space-between; }}
-                .container {{ max-width: 1100px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; }}
-                table {{ width: 100%; border-collapse: collapse; }}
-                th {{ background: #eee; padding: 10px; text-align: left; }}
-                td {{ padding: 10px; border-bottom: 1px solid #ddd; }}
-            </style>
-        </head>
-        <body>
-            <div class="top-nav">
-                <span>Vigilancia RBO</span>
-                <a href="/logout" style="color:white;">Cerrar Sesión</a>
-            </div>
-            <div class="container">
-                <h2>Panel de Control</h2>
-                <p>Inspecciones totales: {total_ops} | Promedio: {promedio:.1f}</p>
-                
-                <form action="/registrar" method="post" style="margin-bottom:20px;">
-                    <input type="date" name="fecha" required>
-                    <input type="text" name="nombre" placeholder="Nombre Operador" required>
-                    <input type="number" name="hallazgos" placeholder="Hallazgos" required>
-                    <button type="submit">Registrar</button>
+        <head><title>Editar Registro</title></head>
+        <body style="font-family:sans-serif; padding:50px; background:#f4f7f6;">
+            <div style="max-width:500px; margin:auto; background:white; padding:30px; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.1);">
+                <h2>Editar Operador</h2>
+                <form action="/editar/{op.id}" method="post">
+                    <label>Fecha:</label><br>
+                    <input type="date" name="fecha" value="{op.fecha.strftime('%Y-%m-%d')}" required style="width:100%; padding:10px; margin:10px 0;"><br>
+                    <label>Nombre:</label><br>
+                    <input type="text" name="nombre" value="{op.nombre}" required style="width:100%; padding:10px; margin:10px 0;"><br>
+                    <label>Hallazgos:</label><br>
+                    <input type="number" name="hallazgos" value="{op.hallazgos}" required style="width:100%; padding:10px; margin:10px 0;"><br>
+                    <button type="submit" style="background:#3498db; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Guardar Cambios</button>
+                    <a href="/" style="margin-left:10px; color:#666;">Cancelar</a>
                 </form>
-
-                <table>
-                    <thead><tr><th>Fecha</th><th>Operador</th><th>Hallazgos</th><th>Riesgo</th><th>Acciones</th></tr></thead>
-                    <tbody>{filas}</tbody>
-                </table>
-                <br>
-                <canvas id="barChart" width="400" height="150"></canvas>
             </div>
-            <script>
-                new Chart(document.getElementById('barChart'), {{
-                    type: 'bar',
-                    data: {{
-                        labels: {nombres_top},
-                        datasets: [{{ label: 'Hallazgos', data: {hallazgos_top}, backgroundColor: '#3498db' }}]
-                    }}
-                }});
-            </script>
         </body>
     </html>
     """
