@@ -3,16 +3,14 @@ from database import Base
 from datetime import datetime
 
 class Operador(Base):
-   __tablename__ = "operadores"
+    __tablename__ = "operadores"
 
-id = Column(Integer, primary_key=True, index=True)
-nombre = Column(String)
-fecha = Column(DateTime)
-hallazgos = Column(Integer, default=0)  # <-- REVISA ESTA LÍNEA
-nivel_riesgo = Column(String)
-    # Agrega aquí otros campos si tu app los usa, por ejemplo:
-    # area = Column(String)
-    # puntaje = Column(Float)
+    # Fíjate que estas líneas tienen 4 espacios de sangría:
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String)
+    fecha = Column(DateTime)
+    hallazgos = Column(Integer, default=0)
+    nivel_riesgo = Column(String)
 
 class User(Base):
     __tablename__ = "users"
