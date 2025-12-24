@@ -1,13 +1,15 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float
+from sqlalchemy import Column, Integer, String, DateTime
 from database import Base
 from datetime import datetime
 
 class Operador(Base):
-    __tablename__ = "operadores"
+   __tablename__ = "operadores"
 
-    id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String, index=True)
-    fecha = Column(DateTime, default=datetime.utcnow)
+id = Column(Integer, primary_key=True, index=True)
+nombre = Column(String)
+fecha = Column(DateTime)
+hallazgos = Column(Integer, default=0)  # <-- REVISA ESTA LÍNEA
+nivel_riesgo = Column(String)
     # Agrega aquí otros campos si tu app los usa, por ejemplo:
     # area = Column(String)
     # puntaje = Column(Float)
