@@ -1,47 +1,48 @@
 import os
 import sys
-
-# Esto ayuda a Python a encontrar archivos en la carpeta actual
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from database import SessionLocal, engine, Base
-# Cambiamos el import para asegurar que lo encuentre
-try:
-    import models
-except ImportError:
-    from . import models
-
+from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
 from passlib.context import CryptContext
 
+# 1. Configuración de Base de Datos (Igual que en database.py)
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# 2. Definimos el modelo User aquí mismo para evitar el ImportError
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    is_active = Column(Boolean, default=True)
+
+# 3. Configuración de seguridad
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def crear_admin():
+def ejecutar():
     db = SessionLocal()
-    # Aseguramos que las tablas existan en Render
+    # Crea la tabla si no existe
     Base.metadata.create_all(bind=engine)
     
-    # --- CONFIGURA TUS DATOS AQUÍ ---
+    # --- DATOS DEL USUARIO ---
     email_nuevo = "admin@rbo.com" 
     password_plano = "123456"
-    # --------------------------------
-    
-    # IMPORTANTE: Revisa si tu clase en models.py se llama 'User' o 'Usuario'
-    # Si se llama 'Usuario', cambia models.User por models.Usuario abajo
-    usuario_existe = db.query(models.User).filter(models.User.email == email_nuevo).first()
-    
-    if not usuario_existe:
+    # -------------------------
+
+    existe = db.query(User).filter(User.email == email_nuevo).first()
+    if not existe:
         hashed_pw = pwd_context.hash(password_plano)
-        admin_user = models.User(
-            email=email_nuevo,
-            hashed_password=hashed_pw,
-            is_active=True
-        )
-        db.add(admin_user)
+        nuevo = User(email=email_nuevo, hashed_password=hashed_pw, is_active=True)
+        db.add(nuevo)
         db.commit()
-        print(f"✅ Usuario {email_nuevo} creado con éxito.")
+        print(f"✅ EXITO: Usuario {email_nuevo} creado.")
     else:
-        print("⚠️ El usuario ya existe.")
+        print("⚠️ AVISO: El usuario ya existe en la base de datos.")
     db.close()
 
 if __name__ == "__main__":
-    crear_admin()
+    ejecutar()
