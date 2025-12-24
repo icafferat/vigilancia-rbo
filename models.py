@@ -10,6 +10,8 @@ class Operador(Base):
     nombre = Column(String)
     fecha = Column(DateTime)
     hallazgos = Column(Integer, default=0)
+    probabilidad = Column(Integer, default=1)  # Escala 1-5
+    severidad = Column(Integer, default=1)     # Escala 1-5
     nivel_riesgo = Column(String)
 
 class User(Base):
