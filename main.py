@@ -15,10 +15,11 @@ import models
 
 # Intentamos crear las tablas automáticamente al iniciar
 try:
+    print("Intentando conectar a la base de datos...")
     models.Base.metadata.create_all(bind=database.engine)
-    print("✅ Tablas verificadas/creadas correctamente.")
+    print("✅ Conexión exitosa y tablas creadas/verificadas.")
 except Exception as e:
-    print(f"⚠️ Error al crear tablas (posible tema de SSL): {e}")
+    print(f"❌ ERROR CRÍTICO AL CREAR TABLAS: {e}")
 
 app = FastAPI()
 
