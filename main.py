@@ -19,7 +19,7 @@ except Exception as e:
 
 app = FastAPI()
 
-# El Middleware de sesión DEBE ir antes de las rutas que lo usan
+# Middleware de sesión (Fundamental para el login)
 app.add_middleware(SessionMiddleware, secret_key="aeronautica_secret_key_2025")
 
 USER_ADMIN = "admin"
@@ -32,7 +32,7 @@ def get_db():
     finally:
         db.close()
 
-# --- LÓGICA DE MATRIZ DE RIESGO ---
+# --- LÓGICA DE MATRIZ DE RIESGO 5x5 ---
 def calcular_riesgo_sms(p: int, s: int):
     score = p * s
     if score >= 15: return "Critico"  # Rojo (15-25)
@@ -74,7 +74,6 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     if not request.session.get("user"): return RedirectResponse(url="/login")
 
     operadores = db.query(models.Operador).order_by(models.Operador.fecha.desc()).all()
-    # Gráfico con los 5 riesgos más altos
     top = db.query(models.Operador).order_by((models.Operador.probabilidad * models.Operador.severidad).desc()).limit(5).all()
     
     filas = ""
@@ -88,8 +87,8 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
             <td style='text-align:center;'>{op.severidad}</td>
             <td style='color:{color}; font-weight:bold;'>{op.nivel_riesgo}</td>
             <td>
-                <a href='/editar/{op.id}' style='text-decoration:none;'>[📝]</a> 
-                <a href='/eliminar/{op.id}' style='color:red; text-decoration:none;' onclick='return confirm(\"¿Eliminar?\")'>[🗑️]</a>
+                <a href='/editar/{op.id}' style='text-decoration:none; margin-right:10px;'>📝</a> 
+                <a href='/eliminar/{op.id}' style='color:red; text-decoration:none;' onclick='return confirm(\"¿Eliminar registro?\")'>🗑️</a>
             </td>
         </tr>"""
 
@@ -97,34 +96,57 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     <html>
         <head><title>RBO Panel</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><style>body{{font-family:sans-serif;margin:0;background:#f4f7f6;}} .container{{background:white;padding:25px;border-radius:10px;max-width:1050px;margin:20px auto;box-shadow:0 2px 10px rgba(0,0,0,0.05);}} table{{width:100%;border-collapse:collapse;margin-top:20px;}} th,td{{padding:12px;border-bottom:1px solid #eee;text-align:left;}} th{{background:#f8f9fa;}} .nav{{display:flex;justify-content:space-between;background:#1e3a5f;color:white;padding:15px 30px;align-items:center;}} select, input{{padding:8px; border-radius:4px; border:1px solid #ccc;}}</style></head>
         <body>
-            <div class="nav"><strong>SISTEMA DE GESTIÓN DE RIESGO (MATRIZ 5X5)</strong> <div><a href="/exportar" style="color:#2ecc71;text-decoration:none;margin-right:20px;font-weight:bold;">EXCEL 📥</a><a href="/logout" style="color:white;text-decoration:none;">Cerrar Sesión</a></div></div>
+            <div class="nav"><strong>SISTEMA RBO - MATRIZ DE RIESGO 5X5</strong> <div><a href="/exportar" style="color:#2ecc71;text-decoration:none;margin-right:20px;font-weight:bold;">EXCEL 📥</a><a href="/logout" style="color:white;text-decoration:none;">Cerrar Sesión</a></div></div>
             <div class="container">
-                <h2>Registro de Inspecciones RBO</h2>
+                <h2>Registro de Inspecciones</h2>
                 <div style="background:#eef2f7; padding:20px; border-radius:8px; margin-bottom:20px;">
                     <form action="/registrar" method="post">
                         <input type="date" name="fecha" required> 
                         <input type="text" name="nombre" placeholder="Nombre Operador" required> 
-                        Probabilidad: 
-                        <select name="probabilidad">
-                            <option value="1">1 (Muy Rara)</option><option value="2">2 (Remota)</option>
-                            <option value="3">3 (Ocasional)</option><option value="4">4 (Frecuente)</option>
-                            <option value="5">5 (Frecuente/Constante)</option>
+                        P: <select name="probabilidad">
+                            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
                         </select>
-                        Severidad: 
-                        <select name="severidad">
-                            <option value="1">1 (Insignificante)</option><option value="2">2 (Menor)</option>
-                            <option value="3">3 (Mayor)</option><option value="4">4 (Peligrosa)</option>
-                            <option value="5">5 (Catastrófica)</option>
+                        S: <select name="severidad">
+                            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
                         </select>
-                        <button type="submit" style="background:#1e3a5f; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer;">+ Evaluar</button>
+                        <button type="submit" style="background:#1e3a5f; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer;">+ Registrar</button>
                     </form>
                 </div>
-                <table><thead><tr><th>Fecha</th><th>Operador</th><th>P (Prob)</th><th>S (Sev)</th><th>Nivel Riesgo</th><th>Acciones</th></tr></thead><tbody>{filas}</tbody></table>
+                <table><thead><tr><th>Fecha</th><th>Operador</th><th>P</th><th>S</th><th>Nivel Riesgo</th><th>Acciones</th></tr></thead><tbody>{filas}</tbody></table>
                 <div style="margin-top:30px;"><canvas id="chart" style="max-height:250px;"></canvas></div>
             </div>
-            <script>new Chart(document.getElementById('chart'),{{type:'bar',data:{{labels:{[o.nombre for o in top]},datasets:[{{label:'Puntaje de Riesgo (P x S)',data:{[o.probabilidad * o.severidad for o in top]},backgroundColor:'#e67e22'}}]}},options:{{responsive:true, maintainAspectRatio:false}}}});</script>
+            <script>new Chart(document.getElementById('chart'),{{type:'bar',data:{{labels:{[o.nombre for o in top]},datasets:[{{label:'Puntaje Riesgo',data:{[o.probabilidad * o.severidad for o in top]},backgroundColor:'#e67e22'}}]}},options:{{responsive:true, maintainAspectRatio:false}}}});</script>
         </body>
     </html>
+    """
+
+# --- EDICIÓN (VISTA) ---
+@app.get("/editar/{id}", response_class=HTMLResponse)
+async def editar_page(id: int, request: Request, db: Session = Depends(get_db)):
+    if not request.session.get("user"): return RedirectResponse(url="/login")
+    op = db.query(models.Operador).filter(models.Operador.id == id).first()
+    if not op: return RedirectResponse(url="/")
+    fecha_val = op.fecha.strftime('%Y-%m-%d') if op.fecha else ""
+    
+    return f"""
+    <html><body style="font-family:sans-serif;padding:50px;background:#f4f7f6;">
+    <div style="max-width:450px;margin:auto;background:white;padding:30px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+        <h3>Editar Evaluación: {op.nombre}</h3><hr>
+        <form action="/editar/{op.id}" method="post">
+            <label>Fecha:</label><br><input type="date" name="fecha" value="{fecha_val}" required style="width:100%;margin:10px 0;padding:8px;"><br>
+            <label>Nombre:</label><br><input type="text" name="nombre" value="{op.nombre}" required style="width:100%;margin:10px 0;padding:8px;"><br>
+            <label>Probabilidad:</label><br>
+            <select name="probabilidad" style="width:100%;margin:10px 0;padding:8px;">
+                {"".join([f'<option value="{i}" {"selected" if op.probabilidad==i else ""}>{i}</option>' for i in range(1,6)])}
+            </select><br>
+            <label>Severidad:</label><br>
+            <select name="severidad" style="width:100%;margin:10px 0;padding:8px;">
+                {"".join([f'<option value="{i}" {"selected" if op.severidad==i else ""}>{i}</option>' for i in range(1,6)])}
+            </select><br>
+            <button type="submit" style="width:100%;background:#3498db;color:white;border:none;padding:12px;border-radius:5px;cursor:pointer;font-weight:bold;">ACTUALIZAR</button>
+        </form>
+        <p style="text-align:center;"><a href="/" style="color:#666;text-decoration:none;">← Volver</a></p>
+    </div></body></html>
     """
 
 # --- ACCIONES ---
@@ -132,21 +154,17 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
 async def registrar(nombre: str = Form(...), probabilidad: int = Form(...), severidad: int = Form(...), fecha: str = Form(...), db: Session = Depends(get_db)):
     try:
         nivel = calcular_riesgo_sms(probabilidad, severidad)
-        fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
         nuevo = models.Operador(
             nombre=nombre, 
             hallazgos=probabilidad * severidad,
             probabilidad=probabilidad,
             severidad=severidad,
             nivel_riesgo=nivel, 
-            fecha=fecha_dt
+            fecha=datetime.strptime(fecha, "%Y-%m-%d")
         )
-        db.add(nuevo)
-        db.commit()
-        return RedirectResponse(url="/", status_code=303)
-    except Exception as e:
-        print(f"Error en registro: {e}")
-        return HTMLResponse(content=f"Error al registrar: {e}", status_code=500)
+        db.add(nuevo); db.commit()
+    except Exception as e: print(f"Error: {e}")
+    return RedirectResponse(url="/", status_code=303)
 
 @app.post("/editar/{id}")
 async def actualizar(id: int, nombre: str = Form(...), probabilidad: int = Form(...), severidad: int = Form(...), fecha: str = Form(...), db: Session = Depends(get_db)):
@@ -158,36 +176,24 @@ async def actualizar(id: int, nombre: str = Form(...), probabilidad: int = Form(
             op.severidad = severidad
             op.nivel_riesgo = calcular_riesgo_sms(probabilidad, severidad)
             op.fecha = datetime.strptime(fecha, "%Y-%m-%d")
+            op.hallazgos = probabilidad * severidad
             db.commit()
-        except Exception as e:
-            print(f"Error en edición: {e}")
+        except Exception as e: db.rollback(); print(f"Error: {e}")
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/eliminar/{id}")
 async def eliminar(id: int, db: Session = Depends(get_db)):
     op = db.query(models.Operador).filter(models.Operador.id == id).first()
-    if op: 
-        db.delete(op)
-        db.commit()
+    if op: db.delete(op); db.commit()
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/exportar")
 async def exportar(db: Session = Depends(get_db)):
     ops = db.query(models.Operador).all()
     if not ops: return RedirectResponse(url="/")
-    data = []
-    for o in ops:
-        data.append({
-            "Fecha": o.fecha.strftime('%Y-%m-%d') if o.fecha else "N/A",
-            "Operador": o.nombre,
-            "Probabilidad": o.probabilidad,
-            "Severidad": o.severidad,
-            "Riesgo": o.nivel_riesgo,
-            "Puntaje": o.probabilidad * o.severidad
-        })
+    data = [{"Fecha": o.fecha.strftime('%d/%m/%Y'), "Operador": o.nombre, "Probabilidad": o.probabilidad, "Severidad": o.severidad, "Riesgo": o.nivel_riesgo} for o in ops]
     df = pd.DataFrame(data)
     out = io.BytesIO()
-    with pd.ExcelWriter(out, engine='openpyxl') as w:
-        df.to_excel(w, index=False)
+    with pd.ExcelWriter(out, engine='openpyxl') as w: df.to_excel(w, index=False)
     out.seek(0)
-    return StreamingResponse(out, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=matriz_riesgo.xlsx"})
+    return StreamingResponse(out, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=matriz_rbo.xlsx"})
