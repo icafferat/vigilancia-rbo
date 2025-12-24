@@ -5,7 +5,7 @@ from datetime import datetime
 class Operador(Base):
     __tablename__ = "operadores"
 
-    # Fíjate que estas líneas tienen 4 espacios de sangría:
+    # Todas estas líneas DEBEN tener 4 espacios de sangría
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String)
     fecha = Column(DateTime)
