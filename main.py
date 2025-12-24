@@ -178,16 +178,24 @@ async def eliminar(id: int, request: Request, db: Session = Depends(get_db)):
         db.commit()
     return RedirectResponse(url="/", status_code=303)
 
-@app.post("/actualizar/{id}")
+@app.post("/editar/{id}")
 async def actualizar(id: int, request: Request, nombre: str = Form(...), hallazgos: int = Form(...), fecha: str = Form(...), db: Session = Depends(get_db)):
-    if not request.session.get("user"): return RedirectResponse(url="/login")
+    if not request.session.get("user"): 
+        return RedirectResponse(url="/login")
+    
     op = db.query(models.Operador).filter(models.Operador.id == id).first()
+    
     if op:
         op.nombre = nombre
         op.hallazgos = hallazgos
+        # Lógica de riesgo
         op.nivel_riesgo = "Critico" if hallazgos > 10 else "Alto" if hallazgos > 5 else "Normal"
+        # Conversión de fecha
         op.fecha = datetime.strptime(fecha, "%Y-%m-%d")
+        
         db.commit()
+    
+    # El status_code=303 es fundamental para que el navegador cambie de POST a GET al redirigir
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/exportar")
