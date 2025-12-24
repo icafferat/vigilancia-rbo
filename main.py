@@ -1,13 +1,21 @@
-# -*- coding: utf-8 -*-
-from fastapi import FastAPI, Form, Depends, Request, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+import os
+from fastapi import FastAPI, Depends, Request, Form, HTTPException, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-import models  # <--- Esto asume que tienes un archivo models.py
-import pandas as pd
-import io
 from datetime import datetime
-from starlette.middleware.sessions import SessionMiddleware
+
+# Importamos nuestros archivos locales
+import database
+import models
+
+# Intentamos crear las tablas automáticamente al iniciar
+try:
+    models.Base.metadata.create_all(bind=database.engine)
+    print("✅ Tablas verificadas/creadas correctamente.")
+except Exception as e:
+    print(f"⚠️ Error al crear tablas (posible tema de SSL): {e}")
 
 app = FastAPI()
 

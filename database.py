@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 
 # 1. Obtenemos la URL de la base de datos de las variables de entorno de Render
 # Si no existe (local), usamos una de respaldo por seguridad
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://", 1)
 
 # 2. Creamos el motor de conexión
 # Para PostgreSQL en Render, no necesitamos los argumentos extras de SQLite
