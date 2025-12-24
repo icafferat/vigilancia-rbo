@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_all, create_engine
+from sqlalchemy import create_engine
 # ... resto de imports
 
 # Esto permite que use la DB de la nube si existe, o la local si no.
