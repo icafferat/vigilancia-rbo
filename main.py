@@ -83,26 +83,34 @@ async def editar_page(id: int, request: Request, db: Session = Depends(get_db)):
     if not request.session.get("user"): 
         return RedirectResponse(url="/login")
     
+    # Buscamos al operador en la base de datos
     op = db.query(models.Operador).filter(models.Operador.id == id).first()
+    
     if not op:
-        return HTMLResponse("<h2>Operador no encontrado</h2><a href='/'>Volver</a>")
+        return HTMLResponse("<h2>Error: Operador no encontrado</h2><a href='/'>Volver al Panel</a>")
 
-    # Formulario con los datos cargados
+    # Retornamos el HTML del formulario con los datos actuales
     return f"""
     <html>
-        <head><title>Editar Registro</title></head>
+        <head><title>Editar Registro - RBO</title></head>
         <body style="font-family:sans-serif; padding:50px; background:#f4f7f6;">
             <div style="max-width:500px; margin:auto; background:white; padding:30px; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.1);">
-                <h2>Editar Operador</h2>
+                <h2 style="color:#1e3a5f;">Editar Operador</h2>
+                <hr>
                 <form action="/editar/{op.id}" method="post">
-                    <label>Fecha:</label><br>
-                    <input type="date" name="fecha" value="{op.fecha.strftime('%Y-%m-%d')}" required style="width:100%; padding:10px; margin:10px 0;"><br>
-                    <label>Nombre:</label><br>
-                    <input type="text" name="nombre" value="{op.nombre}" required style="width:100%; padding:10px; margin:10px 0;"><br>
-                    <label>Hallazgos:</label><br>
-                    <input type="number" name="hallazgos" value="{op.hallazgos}" required style="width:100%; padding:10px; margin:10px 0;"><br>
-                    <button type="submit" style="background:#3498db; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Guardar Cambios</button>
-                    <a href="/" style="margin-left:10px; color:#666;">Cancelar</a>
+                    <label>Fecha de Inspección:</label><br>
+                    <input type="date" name="fecha" value="{op.fecha.strftime('%Y-%m-%d') if op.fecha else ''}" required style="width:100%; padding:10px; margin:10px 0; border:1px solid #ddd; border-radius:5px;"><br>
+                    
+                    <label>Nombre del Operador:</label><br>
+                    <input type="text" name="nombre" value="{op.nombre}" required style="width:100%; padding:10px; margin:10px 0; border:1px solid #ddd; border-radius:5px;"><br>
+                    
+                    <label>Cantidad de Hallazgos:</label><br>
+                    <input type="number" name="hallazgos" value="{op.hallazgos}" required style="width:100%; padding:10px; margin:10px 0; border:1px solid #ddd; border-radius:5px;"><br>
+                    
+                    <div style="margin-top:20px;">
+                        <button type="submit" style="background:#3498db; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">GUARDAR CAMBIOS</button>
+                        <a href="/" style="margin-left:15px; color:#e74c3c; text-decoration:none;">Cancelar</a>
+                    </div>
                 </form>
             </div>
         </body>
