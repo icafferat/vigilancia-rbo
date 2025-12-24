@@ -11,18 +11,15 @@ from datetime import datetime
 import database
 import models
 
-# Intento de creación de tablas
+# Intento de creación de tablas automático
 try:
     models.Base.metadata.create_all(bind=database.engine)
 except Exception as e:
     print(f"Error base de datos: {e}")
 
 app = FastAPI()
-@app.get("/reset-db-admin-2025")
-async def reset_db():
-    models.Base.metadata.drop_all(bind=database.engine)
-    models.Base.metadata.create_all(bind=database.engine)
-    return "✅ Base de datos reseteada con éxito. Ya puedes volver al inicio."
+
+# El Middleware de sesión DEBE ir antes de las rutas que lo usan
 app.add_middleware(SessionMiddleware, secret_key="aeronautica_secret_key_2025")
 
 USER_ADMIN = "admin"
@@ -38,9 +35,16 @@ def get_db():
 # --- LÓGICA DE MATRIZ DE RIESGO ---
 def calcular_riesgo_sms(p: int, s: int):
     score = p * s
-    if score >= 15: return "Critico"  # Rojo
-    if score >= 6: return "Alto"      # Naranja/Amarillo
-    return "Normal"                  # Verde
+    if score >= 15: return "Critico"  # Rojo (15-25)
+    if score >= 6: return "Alto"      # Amarillo/Naranja (6-12)
+    return "Normal"                  # Verde (1-5)
+
+# --- RUTA DE EMERGENCIA PARA RESETEAR ---
+@app.get("/reset-db-admin-2025")
+async def reset_db():
+    models.Base.metadata.drop_all(bind=database.engine)
+    models.Base.metadata.create_all(bind=database.engine)
+    return "✅ Base de datos reseteada con éxito. Ya puedes volver al inicio."
 
 # --- LOGIN ---
 @app.get("/login", response_class=HTMLResponse)
@@ -70,13 +74,15 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     if not request.session.get("user"): return RedirectResponse(url="/login")
 
     operadores = db.query(models.Operador).order_by(models.Operador.fecha.desc()).all()
+    # Gráfico con los 5 riesgos más altos
     top = db.query(models.Operador).order_by((models.Operador.probabilidad * models.Operador.severidad).desc()).limit(5).all()
     
     filas = ""
     for op in operadores:
         color = "#e74c3c" if op.nivel_riesgo == "Critico" else "#f39c12" if op.nivel_riesgo == "Alto" else "#27ae60"
+        fecha_str = op.fecha.strftime('%d/%m/%Y') if op.fecha else 'S/F'
         filas += f"""<tr>
-            <td>{op.fecha.strftime('%d/%m/%Y') if op.fecha else 'S/F'}</td>
+            <td>{fecha_str}</td>
             <td><strong>{op.nombre}</strong></td>
             <td style='text-align:center;'>{op.probabilidad}</td>
             <td style='text-align:center;'>{op.severidad}</td>
@@ -98,21 +104,18 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
                     <form action="/registrar" method="post">
                         <input type="date" name="fecha" required> 
                         <input type="text" name="nombre" placeholder="Nombre Operador" required> 
-                        
                         Probabilidad: 
                         <select name="probabilidad">
                             <option value="1">1 (Muy Rara)</option><option value="2">2 (Remota)</option>
                             <option value="3">3 (Ocasional)</option><option value="4">4 (Frecuente)</option>
                             <option value="5">5 (Frecuente/Constante)</option>
                         </select>
-                        
                         Severidad: 
                         <select name="severidad">
                             <option value="1">1 (Insignificante)</option><option value="2">2 (Menor)</option>
                             <option value="3">3 (Mayor)</option><option value="4">4 (Peligrosa)</option>
                             <option value="5">5 (Catastrófica)</option>
                         </select>
-                        
                         <button type="submit" style="background:#1e3a5f; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer;">+ Evaluar</button>
                     </form>
                 </div>
@@ -124,75 +127,67 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     </html>
     """
 
-# --- EDICIÓN ---
-@app.get("/editar/{id}", response_class=HTMLResponse)
-async def editar_page(id: int, request: Request, db: Session = Depends(get_db)):
-    if not request.session.get("user"): return RedirectResponse(url="/login")
-    op = db.query(models.Operador).filter(models.Operador.id == id).first()
-    if not op: return RedirectResponse(url="/")
-    return f"""
-    <html><body style="font-family:sans-serif;padding:50px;background:#f4f7f6;">
-    <div style="max-width:450px;margin:auto;background:white;padding:30px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
-        <h3 style="color:#1e3a5f;">Re-evaluar Operador</h3><hr>
-        <form action="/editar/{op.id}" method="post">
-            <label>Fecha:</label><br><input type="date" name="fecha" value="{op.fecha.strftime('%Y-%m-%d') if op.fecha else ''}" required style="width:100%;margin:10px 0;"><br>
-            <label>Nombre:</label><br><input type="text" name="nombre" value="{op.nombre}" required style="width:100%;margin:10px 0;"><br>
-            <label>Probabilidad (Actual: {op.probabilidad}):</label><br>
-            <select name="probabilidad" style="width:100%;margin:10px 0;padding:8px;">
-                <option value="1" {'selected' if op.probabilidad==1 else ''}>1</option><option value="2" {'selected' if op.probabilidad==2 else ''}>2</option>
-                <option value="3" {'selected' if op.probabilidad==3 else ''}>3</option><option value="4" {'selected' if op.probabilidad==4 else ''}>4</option>
-                <option value="5" {'selected' if op.probabilidad==5 else ''}>5</option>
-            </select><br>
-            <label>Severidad (Actual: {op.severidad}):</label><br>
-            <select name="severidad" style="width:100%;margin:10px 0;padding:8px;">
-                <option value="1" {'selected' if op.severidad==1 else ''}>1</option><option value="2" {'selected' if op.severidad==2 else ''}>2</option>
-                <option value="3" {'selected' if op.severidad==3 else ''}>3</option><option value="4" {'selected' if op.severidad==4 else ''}>4</option>
-                <option value="5" {'selected' if op.severidad==5 else ''}>5</option>
-            </select><br>
-            <button type="submit" style="width:100%;background:#3498db;color:white;border:none;padding:12px;border-radius:5px;cursor:pointer;font-weight:bold;margin-top:10px;">ACTUALIZAR EVALUACIÓN</button>
-        </form>
-        <div style="text-align:center; margin-top:15px;"><a href="/" style="color:#666;text-decoration:none;">← Cancelar</a></div>
-    </div></body></html>
-    """
-
 # --- ACCIONES ---
 @app.post("/registrar")
 async def registrar(nombre: str = Form(...), probabilidad: int = Form(...), severidad: int = Form(...), fecha: str = Form(...), db: Session = Depends(get_db)):
-    nivel = calcular_riesgo_sms(probabilidad, severidad)
-    nuevo = models.Operador(
-        nombre=nombre, 
-        hallazgos=probabilidad * severidad, # Usamos hallazgos como el score total
-        probabilidad=probabilidad,
-        severidad=severidad,
-        nivel_riesgo=nivel, 
-        fecha=datetime.strptime(fecha, "%Y-%m-%d")
-    )
-    db.add(nuevo); db.commit(); return RedirectResponse(url="/", status_code=303)
+    try:
+        nivel = calcular_riesgo_sms(probabilidad, severidad)
+        fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
+        nuevo = models.Operador(
+            nombre=nombre, 
+            hallazgos=probabilidad * severidad,
+            probabilidad=probabilidad,
+            severidad=severidad,
+            nivel_riesgo=nivel, 
+            fecha=fecha_dt
+        )
+        db.add(nuevo)
+        db.commit()
+        return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        print(f"Error en registro: {e}")
+        return HTMLResponse(content=f"Error al registrar: {e}", status_code=500)
 
 @app.post("/editar/{id}")
 async def actualizar(id: int, nombre: str = Form(...), probabilidad: int = Form(...), severidad: int = Form(...), fecha: str = Form(...), db: Session = Depends(get_db)):
     op = db.query(models.Operador).filter(models.Operador.id == id).first()
     if op:
-        op.nombre = nombre
-        op.probabilidad = probabilidad
-        op.severidad = severidad
-        op.nivel_riesgo = calcular_riesgo_sms(probabilidad, severidad)
-        op.fecha = datetime.strptime(fecha, "%Y-%m-%d")
-        db.commit()
+        try:
+            op.nombre = nombre
+            op.probabilidad = probabilidad
+            op.severidad = severidad
+            op.nivel_riesgo = calcular_riesgo_sms(probabilidad, severidad)
+            op.fecha = datetime.strptime(fecha, "%Y-%m-%d")
+            db.commit()
+        except Exception as e:
+            print(f"Error en edición: {e}")
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/eliminar/{id}")
 async def eliminar(id: int, db: Session = Depends(get_db)):
     op = db.query(models.Operador).filter(models.Operador.id == id).first()
-    if op: db.delete(op); db.commit()
+    if op: 
+        db.delete(op)
+        db.commit()
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/exportar")
 async def exportar(db: Session = Depends(get_db)):
     ops = db.query(models.Operador).all()
     if not ops: return RedirectResponse(url="/")
-    df = pd.DataFrame([{"Fecha": o.fecha, "Operador": o.nombre, "Probabilidad": o.probabilidad, "Severidad": o.severidad, "Riesgo": o.nivel_riesgo} for o in ops])
+    data = []
+    for o in ops:
+        data.append({
+            "Fecha": o.fecha.strftime('%Y-%m-%d') if o.fecha else "N/A",
+            "Operador": o.nombre,
+            "Probabilidad": o.probabilidad,
+            "Severidad": o.severidad,
+            "Riesgo": o.nivel_riesgo,
+            "Puntaje": o.probabilidad * o.severidad
+        })
+    df = pd.DataFrame(data)
     out = io.BytesIO()
-    with pd.ExcelWriter(out, engine='openpyxl') as w: df.to_excel(w, index=False)
+    with pd.ExcelWriter(out, engine='openpyxl') as w:
+        df.to_excel(w, index=False)
     out.seek(0)
     return StreamingResponse(out, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=matriz_riesgo.xlsx"})

@@ -17,7 +17,7 @@ if db_url is not None:
     if "?sslmode=" not in db_url:
         db_url += "?sslmode=require"
     
-    SQLALCHEMY_DATABASE_URL = db_url
+    SQLALCHEMY_DATABASE_URL = "postgresql://admin_rbo:xBBOpHjvMvlYeySU2Q0rs8H5koqJSTBi@dpg-d55mi0mmcj7s73fecir0-a.virginia-postgres.render.com/rbo_db_4pe8"
     # Para Postgres no necesitamos argumentos extra
     engine = create_engine(SQLALCHEMY_DATABASE_URL)
 else:
