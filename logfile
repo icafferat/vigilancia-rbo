@@ -1,0 +1,89 @@
+2025-12-23 20:21:27.884 -05 [36349] FATAL:  lock file "postmaster.pid" already exists
+2025-12-23 20:21:27.884 -05 [36349] HINT:  Is another postmaster (PID 35958) running in data directory "/usr/local/var/postgresql@14"?
+2025-12-23 20:23:40.798 -05 [36397] LOG:  starting PostgreSQL 14.20 (Homebrew) on x86_64-apple-darwin21.6.0, compiled by Apple clang version 14.0.0 (clang-1400.0.29.202), 64-bit
+2025-12-23 20:23:40.799 -05 [36397] LOG:  listening on IPv6 address "::1", port 5432
+2025-12-23 20:23:40.799 -05 [36397] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-12-23 20:23:40.800 -05 [36397] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-12-23 20:23:40.812 -05 [36398] LOG:  database system was interrupted; last known up at 2025-12-23 18:49:22 -05
+2025-12-23 20:23:40.909 -05 [36398] LOG:  database system was not properly shut down; automatic recovery in progress
+2025-12-23 20:23:40.911 -05 [36398] LOG:  redo starts at 0/1732500
+2025-12-23 20:23:40.911 -05 [36398] LOG:  invalid record length at 0/17325E8: wanted 24, got 0
+2025-12-23 20:23:40.911 -05 [36398] LOG:  redo done at 0/17325B0 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2025-12-23 20:23:40.922 -05 [36397] LOG:  database system is ready to accept connections
+2025-12-23 20:23:54.868 -05 [36406] FATAL:  database "ivan" does not exist
+2025-12-23 20:29:17.485 -05 [36467] FATAL:  lock file "postmaster.pid" already exists
+2025-12-23 20:29:17.485 -05 [36467] HINT:  Is another postmaster (PID 36397) running in data directory "/usr/local/var/postgresql@14"?
+2025-12-23 20:29:28.948 -05 [36470] FATAL:  lock file "postmaster.pid" already exists
+2025-12-23 20:29:28.948 -05 [36470] HINT:  Is another postmaster (PID 36397) running in data directory "/usr/local/var/postgresql@14"?
+2025-12-23 20:30:17.934 -05 [36478] LOG:  starting PostgreSQL 14.20 (Homebrew) on x86_64-apple-darwin21.6.0, compiled by Apple clang version 14.0.0 (clang-1400.0.29.202), 64-bit
+2025-12-23 20:30:17.935 -05 [36478] LOG:  listening on IPv6 address "::1", port 5432
+2025-12-23 20:30:17.935 -05 [36478] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-12-23 20:30:17.937 -05 [36478] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-12-23 20:30:17.950 -05 [36479] LOG:  database system was interrupted; last known up at 2025-12-23 20:23:40 -05
+2025-12-23 20:30:18.036 -05 [36479] LOG:  database system was not properly shut down; automatic recovery in progress
+2025-12-23 20:30:18.039 -05 [36479] LOG:  redo starts at 0/1732660
+2025-12-23 20:30:18.039 -05 [36479] LOG:  invalid record length at 0/1732698: wanted 24, got 0
+2025-12-23 20:30:18.039 -05 [36479] LOG:  redo done at 0/1732660 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2025-12-23 20:30:18.050 -05 [36478] LOG:  database system is ready to accept connections
+2025-12-23 20:49:46.338 -05 [37088] FATAL:  lock file "postmaster.pid" already exists
+2025-12-23 20:49:46.338 -05 [37088] HINT:  Is another postmaster (PID 36478) running in data directory "/usr/local/var/postgresql@14"?
+2025-12-23 20:50:12.632 -05 [37136] FATAL:  lock file "postmaster.pid" already exists
+2025-12-23 20:50:12.632 -05 [37136] HINT:  Is another postmaster (PID 36478) running in data directory "/usr/local/var/postgresql@14"?
+2025-12-23 20:50:56.002 -05 [37145] LOG:  starting PostgreSQL 14.20 (Homebrew) on x86_64-apple-darwin21.6.0, compiled by Apple clang version 14.0.0 (clang-1400.0.29.202), 64-bit
+2025-12-23 20:50:56.003 -05 [37145] LOG:  listening on IPv6 address "::1", port 5432
+2025-12-23 20:50:56.003 -05 [37145] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-12-23 20:50:56.005 -05 [37145] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-12-23 20:50:56.018 -05 [37146] LOG:  database system was interrupted; last known up at 2025-12-23 20:50:18 -05
+2025-12-23 20:50:56.098 -05 [37146] LOG:  database system was not properly shut down; automatic recovery in progress
+2025-12-23 20:50:56.100 -05 [37146] LOG:  redo starts at 0/17600B8
+2025-12-23 20:50:56.100 -05 [37146] LOG:  invalid record length at 0/17601A0: wanted 24, got 0
+2025-12-23 20:50:56.100 -05 [37146] LOG:  redo done at 0/1760168 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2025-12-23 20:50:56.111 -05 [37145] LOG:  database system is ready to accept connections
+2025-12-23 20:51:03.492 -05 [37154] FATAL:  database "ivan" does not exist
+2025-12-23 20:57:31.792 -05 [37300] FATAL:  lock file "postmaster.pid" already exists
+2025-12-23 20:57:31.792 -05 [37300] HINT:  Is another postmaster (PID 37145) running in data directory "/usr/local/var/postgresql@14"?
+2025-12-23 20:58:21.080 -05 [37306] LOG:  starting PostgreSQL 14.20 (Homebrew) on x86_64-apple-darwin21.6.0, compiled by Apple clang version 14.0.0 (clang-1400.0.29.202), 64-bit
+2025-12-23 20:58:21.081 -05 [37306] LOG:  listening on IPv6 address "::1", port 5432
+2025-12-23 20:58:21.081 -05 [37306] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-12-23 20:58:21.096 -05 [37306] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-12-23 20:58:21.133 -05 [37307] LOG:  database system was interrupted; last known up at 2025-12-23 20:50:56 -05
+2025-12-23 20:58:21.220 -05 [37307] LOG:  database system was not properly shut down; automatic recovery in progress
+2025-12-23 20:58:21.222 -05 [37307] LOG:  redo starts at 0/1760218
+2025-12-23 20:58:21.222 -05 [37307] LOG:  invalid record length at 0/1760250: wanted 24, got 0
+2025-12-23 20:58:21.222 -05 [37307] LOG:  redo done at 0/1760218 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2025-12-23 20:58:21.245 -05 [37306] LOG:  database system is ready to accept connections
+2025-12-23 20:58:28.239 -05 [37315] FATAL:  database "ivan" does not exist
+2025-12-23 21:06:49.543 -05 [37395] FATAL:  lock file "postmaster.pid" already exists
+2025-12-23 21:06:49.543 -05 [37395] HINT:  Is another postmaster (PID 37306) running in data directory "/usr/local/var/postgresql@14"?
+2025-12-23 21:07:43.053 -05 [37403] LOG:  starting PostgreSQL 14.20 (Homebrew) on x86_64-apple-darwin21.6.0, compiled by Apple clang version 14.0.0 (clang-1400.0.29.202), 64-bit
+2025-12-23 21:07:43.054 -05 [37403] LOG:  listening on IPv6 address "::1", port 5432
+2025-12-23 21:07:43.054 -05 [37403] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-12-23 21:07:43.057 -05 [37403] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-12-23 21:07:43.070 -05 [37404] LOG:  database system was interrupted; last known up at 2025-12-23 20:58:21 -05
+2025-12-23 21:07:43.158 -05 [37404] LOG:  database system was not properly shut down; automatic recovery in progress
+2025-12-23 21:07:43.160 -05 [37404] LOG:  redo starts at 0/17602C8
+2025-12-23 21:07:43.160 -05 [37404] LOG:  invalid record length at 0/1760300: wanted 24, got 0
+2025-12-23 21:07:43.160 -05 [37404] LOG:  redo done at 0/17602C8 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2025-12-23 21:07:43.171 -05 [37403] LOG:  database system is ready to accept connections
+2025-12-23 21:29:00.242 -05 [37403] LOG:  received fast shutdown request
+2025-12-23 21:29:00.243 -05 [37403] LOG:  aborting any active transactions
+2025-12-23 21:29:00.246 -05 [37403] LOG:  background worker "logical replication launcher" (PID 37410) exited with exit code 1
+2025-12-23 21:29:00.246 -05 [37405] LOG:  shutting down
+2025-12-23 21:29:00.258 -05 [37403] LOG:  database system is shut down
+2025-12-23 21:36:52.062 -05 [37686] LOG:  starting PostgreSQL 14.20 (Homebrew) on x86_64-apple-darwin21.6.0, compiled by Apple clang version 14.0.0 (clang-1400.0.29.202), 64-bit
+2025-12-23 21:36:52.064 -05 [37686] LOG:  listening on IPv6 address "::1", port 5432
+2025-12-23 21:36:52.064 -05 [37686] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-12-23 21:36:52.066 -05 [37686] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-12-23 21:36:52.081 -05 [37687] LOG:  database system was shut down at 2025-12-23 21:29:00 -05
+2025-12-23 21:36:52.091 -05 [37686] LOG:  database system is ready to accept connections
+2025-12-23 21:37:01.275 -05 [37697] FATAL:  pre-existing shared memory block (key 27220303, ID 786433) is still in use
+2025-12-23 21:37:01.275 -05 [37697] HINT:  Terminate any old server processes associated with data directory "/usr/local/var/postgresql@14".
+2025-12-23 21:37:01.275 -05 [37697] LOG:  database system is shut down
+2025-12-23 21:37:34.596 -05 [37702] FATAL:  pre-existing shared memory block (key 27220303, ID 786433) is still in use
+2025-12-23 21:37:34.596 -05 [37702] HINT:  Terminate any old server processes associated with data directory "/usr/local/var/postgresql@14".
+2025-12-23 21:37:34.596 -05 [37702] LOG:  database system is shut down
+2025-12-23 21:37:52.094 -05 [37686] LOG:  could not open file "postmaster.pid": No such file or directory
+2025-12-23 21:37:52.094 -05 [37686] LOG:  performing immediate shutdown because data directory lock file is invalid
+2025-12-23 21:37:52.094 -05 [37686] LOG:  received immediate shutdown request
+2025-12-23 21:37:52.094 -05 [37686] LOG:  could not open file "postmaster.pid": No such file or directory
+2025-12-23 21:37:52.105 -05 [37686] LOG:  database system is shut down
