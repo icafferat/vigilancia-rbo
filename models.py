@@ -9,9 +9,15 @@ class Operador(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String)
     fecha = Column(DateTime)
+    probabilidad = Column(Integer)
+    severidad = Column(Integer)
+    # --- NUEVOS CAMPOS DE EXPOSICIÓN ---
+    aeronaves = Column(Integer, default=0)
+    vuelos_mes = Column(Integer, default=0)
+    estaciones = Column(Integer, default=0)
+    antiguedad = Column(Integer, default=0)
+    # ----------------------------------
     hallazgos = Column(Integer, default=0)
-    probabilidad = Column(Integer, default=1)  # Escala 1-5
-    severidad = Column(Integer, default=1)     # Escala 1-5
     nivel_riesgo = Column(String)
 
 class User(Base):
