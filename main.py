@@ -83,70 +83,144 @@ async def logout(request: Request):
 async def dashboard(request: Request, db: Session = Depends(get_db)):
     if not request.session.get("user"): return RedirectResponse(url="/login")
 
-    ops = db.query(models.Operador).order_by(models.Operador.id.desc()).all()
+    ops = db.query(models.Operador).all()
     
+    # --- PROCESAMIENTO DE DATOS PARA GRÁFICAS ---
+    conteos = {"Muy Alta": 0, "Media": 0, "Baja": 0}
+    nombres_labels = []
+    puntajes_sms = []
+    niveles_exposicion = []
+
     filas = ""
     for o in ops:
+        # Calcular perfil y datos de exposición
         prioridad, frecuencia, color = calcular_perfil_rbo(o.probabilidad, o.severidad, o.aeronaves or 0, o.vuelos_mes or 0, o.estaciones or 0)
+        
+        # Calcular un valor de exposición de 1 a 5 para la gráfica (basado en la misma lógica de prioridad)
+        # Esto es solo para la línea visual de la gráfica
+        puntos_exp = 1
+        if (o.aeronaves or 0) > 10 or (o.vuelos_mes or 0) > 200: puntos_exp = 5
+        elif (o.aeronaves or 0) > 3 or (o.vuelos_mes or 0) > 50: puntos_exp = 3
+        
+        conteos[prioridad] += 1
+        nombres_labels.append(o.nombre)
+        puntajes_sms.append(o.probabilidad * o.severidad)
+        niveles_exposicion.append(puntos_exp * 5) # Multiplicamos por 5 para nivelar la escala (1-5 -> 5-25)
+        
         filas += f"""<tr style='border-bottom: 1px solid #eee;'>
             <td>{o.nombre}</td>
             <td style='text-align:center;'>{o.probabilidad} x {o.severidad}</td>
             <td style='text-align:center;'>{o.aeronaves} Acft / {o.vuelos_mes} Ops</td>
             <td style='color:{color}; font-weight:bold;'>{prioridad}</td>
             <td style='background:#f9f9f9; font-weight:bold; text-align:center;'>{frecuencia}</td>
-            <td>
-                <a href='/eliminar/{o.id}' style='color:red; text-decoration:none;' onclick='return confirm(\"¿Eliminar?\")'>🗑️</a>
-            </td>
+            <td><a href='/eliminar/{o.id}' style='color:red; text-decoration:none;' onclick='return confirm(\"¿Eliminar?\")'>🗑️</a></td>
         </tr>"""
 
     return f"""
     <html>
-    <head><title>Plan 2026</title><style>
+    <head><title>Dashboard RBO 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
         body{{font-family:sans-serif; margin:0; background:#f4f7f6;}}
-        .nav{{background:#1e3a5f; color:white; padding:15px 30px; display:flex; justify-content:space-between;}}
-        .container{{max-width:1100px; margin:20px auto; background:white; padding:20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);}}
+        .nav{{background:#1e3a5f; color:white; padding:15px 30px; display:flex; justify-content:space-between; align-items:center;}}
+        .container{{max-width:1200px; margin:20px auto; background:white; padding:25px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1);}}
         table{{width:100%; border-collapse:collapse; margin-top:20px;}}
-        th, td{{padding:12px; text-align:left;}}
-        th{{background:#f8f9fa; color:#333;}}
-        .form-box{{background:#eef2f7; padding:20px; border-radius:8px; display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;}}
-        .btn{{background:#1e3a5f; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; grid-column: span 3;}}
-    </style></head>
+        th, td{{padding:14px; text-align:left; border-bottom: 1px solid #eee;}}
+        th{{background:#f8f9fa; color:#2c3e50; text-transform:uppercase; font-size:12px;}}
+        .grid-charts{{display:grid; grid-template-columns: 1fr 1.5fr; gap:25px; margin-top:35px;}}
+        .chart-card{{background:#fff; padding:20px; border:1px solid #e1e8ed; border-radius:10px; shadow: 0 2px 4px rgba(0,0,0,0.05);}}
+        .form-box{{background:#f1f4f8; padding:20px; border-radius:10px; display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-bottom:30px;}}
+        .btn{{background:#1e3a5f; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; grid-column: span 3; font-weight:bold; font-size:16px;}}
+        .btn:hover{{background:#2c5282;}}
+        input{{padding:10px; border:1px solid #cbd5e0; border-radius:5px; width:100%; box-sizing:border-box;}}
+    </style>
+    </head>
     <body>
         <div class="nav">
-            <strong>PLANIFICACIÓN DE VIGILANCIA RBO 2026</strong>
-            <div><a href="/exportar" style="color:#2ecc71; text-decoration:none; margin-right:15px;">DESCARGAR PLAN EXCEL 📥</a><a href="/logout" style="color:white; text-decoration:none;">Cerrar</a></div>
+            <h2 style="margin:0;">PLANIFICACIÓN VIGILANCIA 2026 (RBO)</h2>
+            <div>
+                <a href="/exportar" style="color:#2ecc71; text-decoration:none; margin-right:20px; font-weight:bold; border:1px solid #2ecc71; padding:8px 15px; border-radius:5px;">EXCEL 📥</a>
+                <a href="/logout" style="color:#ff7675; text-decoration:none; font-weight:bold;">Cerrar Sesión</a>
+            </div>
         </div>
+        
         <div class="container">
-            <h3>Nueva Evaluación de Perfil de Riesgo</h3>
+            <h3>1. Evaluación del Perfil de Riesgo y Exposición</h3>
             <form action="/registrar" method="post" class="form-box">
-                <input type="text" name="nombre" placeholder="Nombre del Operador" required style="grid-column: span 2;">
-                <input type="date" name="fecha" required>
-                
-                <div>Probabilidad (1-5):<br><input type="number" name="probabilidad" min="1" max="5" required style="width:100%;"></div>
-                <div>Severidad (1-5):<br><input type="number" name="severidad" min="1" max="5" required style="width:100%;"></div>
-                <div>N° Aeronaves:<br><input type="number" name="aeronaves" required style="width:100%;"></div>
-                
-                <div>Vuelos Mensuales:<br><input type="number" name="vuelos_mes" required style="width:100%;"></div>
-                <div>N° Estaciones/Bases:<br><input type="number" name="estaciones" required style="width:100%;"></div>
-                <div>Antigüedad Promedio:<br><input type="number" name="antiguedad" placeholder="Años" style="width:100%;"></div>
-                
-                <button type="submit" class="btn">CALCULAR PERFIL Y AGREGAR AL PLAN 2026</button>
+                <div style="grid-column: span 2;">Nombre Operador:<input type="text" name="nombre" required></div>
+                <div>Fecha Evaluación:<input type="date" name="fecha" required></div>
+                <div>Probabilidad SMS (1-5):<input type="number" name="probabilidad" min="1" max="5" required></div>
+                <div>Severidad SMS (1-5):<input type="number" name="severidad" min="1" max="5" required></div>
+                <div>N° Aeronaves:<input type="number" name="aeronaves" required></div>
+                <div>Vuelos Mensuales:<input type="number" name="vuelos_mes" required></div>
+                <div>N° Estaciones/Bases:<input type="number" name="estaciones" required></div>
+                <button type="submit" class="btn">ACTUALIZAR PLAN DE VIGILANCIA 2026</button>
             </form>
 
             <table>
                 <thead>
-                    <tr>
-                        <th>Operador</th>
-                        <th>Riesgo SMS (PxS)</th>
-                        <th>Exposición (Acft/Ops)</th>
-                        <th>Prioridad 2026</th>
-                        <th>Frecuencia Inspección</th>
-                        <th>Acciones</th>
-                    </tr>
+                    <tr><th>Operador</th><th>Riesgo SMS (PxS)</th><th>Exposición</th><th>Prioridad 2026</th><th>Inspecciones Sugeridas</th><th>Eliminar</th></tr>
                 </thead>
                 <tbody>{filas}</tbody>
             </table>
+
+            <div class="grid-charts">
+                <div class="chart-card">
+                    <h4 style="text-align:center; color:#2c3e50;">Carga de Trabajo 2026</h4>
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4 style="text-align:center; color:#2c3e50;">Riesgo vs Exposición por Operador</h4>
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
         </div>
+
+        <script>
+            // Gráfico de Carga de Trabajo
+            new Chart(document.getElementById('pieChart'), {{
+                type: 'doughnut',
+                data: {{
+                    labels: ['Prioridad Muy Alta', 'Prioridad Media', 'Prioridad Baja'],
+                    datasets: [{{
+                        data: [{conteos['Muy Alta']}, {conteos['Media']}, {conteos['Baja']}],
+                        backgroundColor: ['#e74c3c', '#f39c12', '#27ae60'],
+                        borderWidth: 2
+                    }}]
+                }},
+                options: {{ plugins: {{ legend: {{ position: 'bottom' }} }} }}
+            }});
+
+            // Gráfico de Riesgo vs Exposición
+            new Chart(document.getElementById('barChart'), {{
+                data: {{
+                    labels: {nombres_labels},
+                    datasets: [
+                    {{
+                        type: 'bar',
+                        label: 'Puntaje SMS (Riesgo)',
+                        data: {puntajes_sms},
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: '#3498db',
+                        borderWidth: 1
+                    }},
+                    {{
+                        type: 'line',
+                        label: 'Nivel Exposición (Normalizado)',
+                        data: {niveles_exposicion},
+                        borderColor: '#e67e22',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        pointRadius: 5
+                    }}]
+                }},
+                options: {{ 
+                    responsive: true,
+                    scales: {{ y: {{ beginAtZero: true, max: 25, title: {{ display: true, text: 'Nivel (Escala 0-25)' }} }} }} 
+                }}
+            }});
+        </script>
     </body>
     </html>
     """
