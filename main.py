@@ -65,7 +65,17 @@ async def login(request: Request, username: str = Form(...), password: str = For
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login")
+from sqlalchemy import text # Asegúrate de tener este import arriba
 
+@app.get("/migrar-db")
+def migrar_db(db: Session = Depends(get_db)):
+    try:
+        # Comando SQL para añadir la columna faltante sin borrar tus datos
+        db.execute(text("ALTER TABLE operadores ADD COLUMN IF NOT EXISTS inspector VARCHAR DEFAULT 'Sin asignar'"))
+        db.commit()
+        return "✅ Columna 'inspector' añadida exitosamente a la base de datos."
+    except Exception as e:
+        return f"❌ Error al migrar: {str(e)}"
 # --- DASHBOARD PRINCIPAL ---
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request, db: Session = Depends(get_db)):
