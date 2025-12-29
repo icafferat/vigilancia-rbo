@@ -4,11 +4,11 @@ sqlalchemy
 psycopg2-binary
 pandas
 openpyxl
+xlsxwriter
 jinja2
 python-multipart
 passlib[bcrypt]
 python-jose[cryptography]
 python-dotenv
 itsdangerous
-pandas
-openpyxl
+starlette
