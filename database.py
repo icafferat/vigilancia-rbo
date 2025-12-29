@@ -3,31 +3,33 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# 1. Intentamos obtener la URL de la nube
+# 1. Obtenemos la URL de la variable de entorno de Render
 db_url = os.getenv("DATABASE_URL")
 
-# 2. Lógica Inteligente
-if db_url is not None:
-    # SI ESTAMOS EN RENDER (Nube)
-    # Corregimos el prefijo si es necesario
+if db_url:
+    # --- CONFIGURACIÓN PARA RENDER (PostgreSQL) ---
+    # Render a veces entrega postgres://, pero SQLAlchemy requiere postgresql://
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
     
-    # Aseguramos el modo SSL para PostgreSQL
-    if "?sslmode=" not in db_url:
-        db_url += "?sslmode=require"
-    
-    SQLALCHEMY_DATABASE_URL = "postgresql://admin_rbo:xBBOpHjvMvlYeySU2Q0rs8H5koqJSTBi@dpg-d55mi0mmcj7s73fecir0-a.virginia-postgres.render.com/rbo_db_4pe8"
-    # Para Postgres no necesitamos argumentos extra
+    SQLALCHEMY_DATABASE_URL = db_url
+    # No necesitamos argumentos extra para Postgres
     engine = create_engine(SQLALCHEMY_DATABASE_URL)
 else:
-    # SI ESTAMOS EN TU IMAC (Local)
-    # Usamos SQLite y creamos un archivo local
+    # --- CONFIGURACIÓN PARA TU IMAC (SQLite) ---
     SQLALCHEMY_DATABASE_URL = "sqlite:///./rbo_local.db"
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, 
-        connect_args={"check_same_thread": False} # Necesario solo para SQLite
+        connect_args={"check_same_thread": False}
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# Función para obtener la sesión (utilizada en main.py)
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
