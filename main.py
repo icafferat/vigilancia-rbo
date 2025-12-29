@@ -1,3 +1,7 @@
+from openpyxl.chart import PieChart, Reference
+from openpyxl.chart.series import DataPoint
+from openpyxl.drawing.image import Image
+from openpyxl.styles import PatternFill, Font
 from fastapi import FastAPI, Depends, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
@@ -131,17 +135,40 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
             </div>
         </div>
         <div class="container">
+            <details style="background:#fff3cd; border:1px solid #ffeeba; padding:15px; border-radius:8px; margin-bottom:20px; color:#856404;">
+                <summary style="cursor:pointer; font-weight:bold;"> Ver Guía de Puntajes (Matriz de Riesgo OACI)</summary>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:10px; font-size:13px;">
+                    <div>
+                        <strong>PROBABILIDAD:</strong><br>
+                        5: Frecuente (Varias veces al mes)<br>
+                        4: Ocasional (Varias veces al año)<br>
+                        3: Remota (Poco probable)<br>
+                        2: Improbable (No se espera que ocurra)<br>
+                        1: Extremadamente improbable
+                    </div>
+                    <div>
+                        <strong>SEVERIDAD:</strong><br>
+                        5: Catastrófica (Pérdida de aeronave)<br>
+                        4: Peligrosa (Reducción de seguridad)<br>
+                        3: Mayor (Incidente serio)<br>
+                        2: Menor (Incidente leve)<br>
+                        1: Insignificante
+                    </div>
+                </div>
+            </details>
+
             <div class="form-section">
                 <h3>Nuevo Registro de Operador</h3>
                 <form action="/registrar" method="post" class="grid-form">
-                    <input type="text" name="nombre" placeholder="Nombre Operador" required style="grid-column: span 2;">
-                    <input type="date" name="fecha" required>
-                    <input type="number" name="probabilidad" placeholder="Prob. SMS (1-5)" min="1" max="5" required>
-                    <input type="number" name="severidad" placeholder="Sev. SMS (1-5)" min="1" max="5" required>
+                    <input type="text" name="inspector" placeholder="Inspector Responsable" required style="grid-column: span 1;">
+                    <input type="text" name="nombre" placeholder="Nombre Operador (Ej. LATAM, SKY)" required style="grid-column: span 2;">
+                    <input type="date" name="fecha" value="{datetime.now().strftime('%Y-%m-%d')}" required>
+                    <input type="number" name="probabilidad" placeholder="Prob. (1-5)" min="1" max="5" required title="1: Raro - 5: Frecuente">
+                    <input type="number" name="severidad" placeholder="Sev. (1-5)" min="1" max="5" required title="1: Leve - 5: Catastrófico">
                     <input type="number" name="aeronaves" placeholder="N° Aeronaves" required>
-                    <input type="number" name="vuelos_mes" placeholder="Vuelos Mensuales" required>
-                    <input type="number" name="estaciones" placeholder="N° Estaciones" required>
-                    <button type="submit" style="grid-column: span 3;">CALCULAR Y AGREGAR AL PLAN</button>
+                    <input type="number" name="vuelos_mes" placeholder="Vuelos al Mes" required>
+                    <input type="number" name="estaciones" placeholder="N° Estaciones" required title="Bases o destinos principales">
+                    <button type="submit" style="grid-column: span 3;">GENERAR PLAN DE VIGILANCIA</button>
                 </form>
             </div>
 
@@ -189,7 +216,8 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
 async def registrar(nombre: str = Form(...), probabilidad: int = Form(...), 
                     severidad: int = Form(...), aeronaves: int = Form(...), 
                     vuelos_mes: int = Form(...), estaciones: int = Form(...),
-                    fecha: str = Form(...), db: Session = Depends(get_db)):
+                    fecha: str = Form(...), inspector: str = Form(...), # <-- Nuevo campo
+                    db: Session = Depends(get_db)):
     nuevo = models.Operador(
         nombre=nombre, 
         probabilidad=probabilidad,
@@ -197,6 +225,7 @@ async def registrar(nombre: str = Form(...), probabilidad: int = Form(...),
         aeronaves=aeronaves,
         vuelos_mes=vuelos_mes,
         estaciones=estaciones,
+        inspector=inspector, # <-- Guardar inspector
         fecha=datetime.strptime(fecha, "%Y-%m-%d")
     )
     db.add(nuevo)
@@ -209,39 +238,104 @@ async def eliminar(id: int, db: Session = Depends(get_db)):
     if op: db.delete(op); db.commit()
     return RedirectResponse(url="/", status_code=303)
 
+from openpyxl.chart import PieChart, Reference
+from openpyxl.chart.series import DataPoint
+from openpyxl.drawing.image import Image # Aunque no la usemos aquí, es útil tenerla para imágenes
+from openpyxl.styles import PatternFill, Font
+import pandas as pd
+import io
+from datetime import datetime
+from collections import Counter # Para contar las prioridades
+
 @app.get("/exportar")
 async def exportar_excel(db: Session = Depends(get_db)):
     ops = db.query(models.Operador).all()
     
-    data = []
+    data_plan = []
+    prioridades_list = [] # Para el gráfico
     for o in ops:
         prioridad, color, cronograma = calcular_perfil_rbo(
             o.probabilidad, o.severidad, o.aeronaves or 0, o.vuelos_mes or 0, o.estaciones or 0
         )
-        
-        data.append({
+        data_plan.append({
             "Operador": o.nombre,
-            "Fecha Evaluación": o.fecha,
-            "Probabilidad SMS": o.probabilidad,
-            "Severidad SMS": o.severidad,
-            "Puntaje Riesgo": o.probabilidad * o.severidad,
-            "Aeronaves": o.aeronaves,
+            "Inspector Asignado": getattr(o, 'inspector', 'No asignado'),
+            "Fecha Eval": o.fecha.strftime('%d/%m/%Y') if o.fecha else "N/A",
+            "Riesgo SMS": (o.probabilidad or 0) * (o.severidad or 0),
+            "ACFT": o.aeronaves,
             "Vuelos/Mes": o.vuelos_mes,
-            "Prioridad 2026": prioridad,
-            "Cronograma Sugerido": cronograma
+            "Prioridad": prioridad,
+            "Cronograma 2026": cronograma
         })
+        prioridades_list.append(prioridad)
 
-    df = pd.DataFrame(data)
-    
-    # Crear un archivo Excel en memoria
+    # Contar las prioridades para el gráfico
+    conteo_prioridades = Counter(prioridades_list)
+    df_conteo = pd.DataFrame(conteo_prioridades.items(), columns=['Prioridad', 'Cantidad'])
+    # Aseguramos que las tres categorías existan para el gráfico
+    for p in ["Muy Alta", "Media", "Baja"]:
+        if p not in df_conteo['Prioridad'].values:
+            df_conteo = pd.concat([df_conteo, pd.DataFrame([{'Prioridad': p, 'Cantidad': 0}])], ignore_index=True)
+    df_conteo = df_conteo.sort_values(by='Prioridad', key=lambda x: x.map({"Muy Alta":0, "Media":1, "Baja":2})) # Ordenar
+
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Plan Vigilancia 2026')
-    
+        # --- Hoja 1: Plan de Vigilancia ---
+        df_plan = pd.DataFrame(data_plan)
+        df_plan.to_excel(writer, index=False, sheet_name='Plan de Vigilancia')
+        
+        workbook = writer.book
+        worksheet_plan = writer.sheets['Plan de Vigilancia']
+        
+        fill_rojo = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+        fill_naranja = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+        fill_verde = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        font_negrita = Font(bold=True)
+
+        for row in range(2, len(data_plan) + 2):
+            celda = worksheet_plan.cell(row=row, column=7) # Columna G es Prioridad
+            valor = celda.value
+            if valor == "Muy Alta": celda.fill = fill_rojo
+            elif valor == "Media": celda.fill = fill_naranja
+            elif valor == "Baja": celda.fill = fill_verde
+            celda.font = font_negrita
+
+        # --- Hoja 2: Matriz de Referencia ---
+        pd.DataFrame([
+            {"Nivel": 5, "Probabilidad": "Frecuente", "Severidad": "Catastrófica", "Definición": "Ocurre frecuentemente / Pérdida total"},
+            {"Nivel": 4, "Probabilidad": "Ocasional", "Severidad": "Peligrosa", "Definición": "Ocurre a veces / Gran reducción de seguridad"},
+            {"Nivel": 3, "Probabilidad": "Remota", "Severidad": "Mayor", "Definición": "Poco probable / Incidente serio"},
+            {"Nivel": 2, "Probabilidad": "Improbable", "Severidad": "Menor", "Definición": "Muy poco probable / Incidente leve"},
+            {"Nivel": 1, "Probabilidad": "Ext. Improbable", "Severidad": "Insignificante", "Definición": "Casi imposible / Sin consecuencias"},
+        ]).to_excel(writer, index=False, sheet_name='Criterios')
+        
+        # --- Hoja 3: Gráfico de Distribución ---
+        worksheet_chart = workbook.create_sheet(title='Distribución RBO')
+        df_conteo.to_excel(writer, sheet_name='Distribución RBO', startrow=0, startcol=0, index=False)
+
+        # Crear el gráfico de pastel
+        chart = PieChart()
+        labels = Reference(worksheet_chart, min_col=1, min_row=2, max_row=len(df_conteo) + 1)
+        data = Reference(worksheet_chart, min_col=2, min_row=1, max_row=len(df_conteo) + 1)
+        chart.add_data(data, titles_from_data=True)
+        chart.set_categories(labels)
+        chart.title = "Distribución de Prioridades de Vigilancia RBO"
+
+        # Colores personalizados para las tajadas (muy similar a tu web)
+        for i, (prioridad, cantidad) in enumerate(df_conteo.values):
+            if prioridad == "Muy Alta":
+                chart.series[0].data_points[i].graphicalProperties.solidFill = "FF0000" # Rojo
+            elif prioridad == "Media":
+                chart.series[0].data_points[i].graphicalProperties.solidFill = "FFA500" # Naranja
+            elif prioridad == "Baja":
+                chart.series[0].data_points[i].graphicalProperties.solidFill = "008000" # Verde
+        
+        chart.width = 15 # cm
+        chart.height = 10 # cm
+        
+        worksheet_chart.add_chart(chart, "D1") # Posicionar el gráfico en la celda D1
+
     output.seek(0)
-    
-    headers = {
-        'Content-Disposition': 'attachment; filename="Plan_Vigilancia_RBO_2026.xlsx"'
-    }
-    
+    fecha_hoy = datetime.now().strftime("%d_%m_%Y")
+    headers = {'Content-Disposition': f'attachment; filename="Plan_RBO_{fecha_hoy}.xlsx"'}
     return StreamingResponse(output, headers=headers, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

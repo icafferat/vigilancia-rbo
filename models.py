@@ -4,6 +4,8 @@ from datetime import datetime
 
 class Operador(Base):
     __tablename__ = "operadores"
+    # ... tus otros campos ...
+    inspector = Column(String, default="Sin asignar")
 
     # Todas estas líneas DEBEN tener 4 espacios de sangría
     id = Column(Integer, primary_key=True, index=True)
