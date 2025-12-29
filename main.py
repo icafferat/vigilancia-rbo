@@ -65,7 +65,8 @@ async def logout(request: Request):
 # --- DASHBOARD PRINCIPAL ---
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request, db: Session = Depends(get_db)):
-    if not request.session.get("user"): return RedirectResponse(url="/login")
+    if not request.session.get("user"): 
+        return RedirectResponse(url="/login")
 
     ops = db.query(models.Operador).all()
     
@@ -75,22 +76,35 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     
     filas = ""
     for o in ops:
+        # 1. Ejecutar lógica RBO
         prioridad, color, cronograma = calcular_perfil_rbo(
             o.probabilidad, o.severidad, o.aeronaves or 0, o.vuelos_mes or 0, o.estaciones or 0
         )
         
+        # 2. Llenar datos para gráficas
         conteos[prioridad] += 1
         nombres_labels.append(o.nombre)
-        puntajes_sms.append(o.probabilidad * o.severidad)
+        puntajes_sms.append((o.probabilidad or 0) * (o.severidad or 0))
         
+        # 3. Construir filas de la tabla
         filas += f"""
         <tr style='border-bottom: 1px solid #eee;'>
             <td style='padding:15px;'><strong>{o.nombre}</strong></td>
-            <td style='text-align:center;'><span style='background:{color}; color:white; padding:5px 10px; border-radius:15px; font-size:12px;'>{prioridad}</span></td>
-            <td><div style='background:#f8f9fa; border-left:4px solid {color}; padding:10px; border-radius:4px; font-size:13px;'>{cronograma}</div></td>
+            <td style='text-align:center;'>
+                <span style='background:{color}; color:white; padding:5px 10px; border-radius:15px; font-size:12px; font-weight:bold;'>
+                    {prioridad}
+                </span>
+            </td>
+            <td>
+                <div style='background:#f8f9fa; border-left:4px solid {color}; padding:10px; border-radius:4px; font-family:monospace; font-size:13px;'>
+                    {cronograma}
+                </div>
+            </td>
             <td style='text-align:center;'><a href='/eliminar/{o.id}' style='text-decoration:none;'>🗑️</a></td>
-        </tr>"""
+        </tr>
+        """
 
+    # IMPORTANTE: Aquí debe ir el return f"""
     return f"""
     <html>
     <head>
@@ -99,7 +113,7 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
         <style>
             body {{ font-family: sans-serif; background:#f4f7f9; margin:0; }}
             .header {{ background:#1a2a3a; color:white; padding:15px 40px; display:flex; justify-content:space-between; align-items:center; }}
-            .container {{ max-width:1100px; margin:20px auto; background:white; padding:25px; border-radius:10px; }}
+            .container {{ max-width:1100px; margin:20px auto; background:white; padding:25px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
             .form-section {{ background:#eef2f7; padding:20px; border-radius:8px; margin-bottom:20px; }}
             .grid-form {{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }}
             input, button {{ padding:10px; border-radius:5px; border:1px solid #ccc; }}
@@ -132,18 +146,40 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
             </div>
 
             <table>
-                <thead><tr><th>Operador</th><th>Prioridad</th><th>Cronograma 2026</th><th>Acción</th></tr></thead>
+                <thead><tr><th>Operador</th><th style="text-align:center;">Prioridad</th><th>Cronograma 2026</th><th style="text-align:center;">Acción</th></tr></thead>
                 <tbody>{filas}</tbody>
             </table>
 
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:30px;">
-                <canvas id="pieChart"></canvas>
-                <canvas id="barChart"></canvas>
+                <div><canvas id="pieChart"></canvas></div>
+                <div><canvas id="barChart"></canvas></div>
             </div>
         </div>
         <script>
-            new Chart(document.getElementById('pieChart'), {{ type: 'doughnut', data: {{ labels: ['Muy Alta', 'Media', 'Baja'], datasets: [{{ data: [{conteos['Muy Alta']}, {conteos['Media']}, {conteos['Baja']}], backgroundColor: ['#e74c3c', '#f39c12', '#27ae60'] }}] }} }});
-            new Chart(document.getElementById('barChart'), {{ type: 'bar', data: {{ labels: {nombres_labels}, datasets: [{{ label: 'Riesgo SMS', data: {puntajes_sms}, backgroundColor: '#3498db' }}] }} }});
+            new Chart(document.getElementById('pieChart'), {{ 
+                type: 'doughnut', 
+                data: {{ 
+                    labels: ['Muy Alta', 'Media', 'Baja'], 
+                    datasets: [{{ 
+                        data: [{conteos['Muy Alta']}, {conteos['Media']}, {conteos['Baja']}], 
+                        backgroundColor: ['#e74c3c', '#f39c12', '#27ae60'] 
+                    }}] 
+                }},
+                options: {{ plugins: {{ title: {{ display: true, text: 'Distribución de Riesgo' }} }} }}
+            }});
+
+            new Chart(document.getElementById('barChart'), {{ 
+                type: 'bar', 
+                data: {{ 
+                    labels: {nombres_labels}, 
+                    datasets: [{{ 
+                        label: 'Riesgo SMS (P x S)', 
+                        data: {puntajes_sms}, 
+                        backgroundColor: '#3498db' 
+                    }}] 
+                }},
+                options: {{ plugins: {{ title: {{ display: true, text: 'Puntaje SMS por Operador' }} }} }}
+            }});
         </script>
     </body>
     </html>
